@@ -25,6 +25,24 @@ def natural_key(text):
     ]
 
 
+def get_next_index(folder):
+    """
+    Find next available index in a species folder
+    so files never overwrite.
+    """
+    if not os.path.exists(folder):
+        return 1
+
+    existing = [
+        int(re.search(r"_obj(\d+)\.png$", f).group(1))
+        for f in os.listdir(folder)
+        if re.search(r"_obj(\d+)\.png$", f)
+    ]
+
+    return max(existing, default=0) + 1
+
+
+
 def choose_background_layer(psd):
     """
     Ask user to choose which layer is the real background image.
@@ -115,8 +133,6 @@ def process_psd(psd_path, output_root, pad_ratio=0.15):
     psd = PSDImage.open(psd_path)
 
     psd_name = os.path.splitext(os.path.basename(psd_path))[0]
-    output_dir = os.path.join(output_root, psd_name)
-    os.makedirs(output_dir, exist_ok=True)
 
     print(f"\n=== Processing: {psd_name} ===")
     print(f"Size: {psd.width} x {psd.height}")
@@ -153,13 +169,17 @@ def process_psd(psd_path, output_root, pad_ratio=0.15):
 
         print(f"Layer: {layer.name} → {len(contours)} objects")
 
+        # --- create SPECIES folder ---
+        safe_name = layer.name.replace("/", "_")
+        species_dir = os.path.join(output_root, safe_name)
+        os.makedirs(species_dir, exist_ok=True)
+
         # --- PSD global offset ---
         x0, y0, _, _ = layer.bbox
 
         for j, cnt in enumerate(contours):
 
             cnt_global = cnt + np.array([[x0, y0]])
-
             x, y, w, h = cv2.boundingRect(cnt_global)
 
             x, y, w, h = make_padded_square_bbox(
@@ -168,14 +188,30 @@ def process_psd(psd_path, output_root, pad_ratio=0.15):
 
             cropped_img = background[y:y+h, x:x+w].copy()
 
-            safe_name = layer.name.replace("/", "_")
-            out_path = os.path.join(
-                output_dir, f"{safe_name}_obj{j+1}.png"
-            )
+            # include PSD name so files don’t overwrite
+            start_idx = get_next_index(species_dir)
+
+            for j, cnt in enumerate(contours, start=start_idx):
+
+                cnt_global = cnt + np.array([[x0, y0]])
+                x, y, w, h = cv2.boundingRect(cnt_global)
+
+                x, y, w, h = make_padded_square_bbox(
+                    x, y, w, h, img_w, img_h, pad_ratio
+                )
+
+                cropped_img = background[y:y+h, x:x+w].copy()
+
+                out_path = os.path.join(
+                    species_dir, f"{safe_name}_obj{j}.png"
+                )
+
+                cv2.imwrite(out_path, cropped_img)
+
 
             cv2.imwrite(out_path, cropped_img)
 
-    print(f"Saved outputs → {output_dir}")
+    print(f"Saved outputs grouped by species in → {output_root}")
 
 
 # ------------------------------------------------------------
