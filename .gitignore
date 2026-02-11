@@ -1,3 +1,9 @@
 Images/
 classifier_dataset/
 output/
+output_yolo/
+dataset/
+runs/detect/
+image_to_test/
+*.pt
+*.pth
