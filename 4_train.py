@@ -1,0 +1,1 @@
+(marine-ml) luke-griffin@luke-griffin-Precision-7680:~/psd-tools$ yolo detect train   model=yolov8n.pt   data=data.yaml   imgsz=640   epochs=50   batch=16   device=0   name=clean_labels

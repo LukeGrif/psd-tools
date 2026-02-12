@@ -5,5 +5,10 @@ output_yolo/
 dataset/
 runs/detect/
 image_to_test/
+extracted_boxes/
+psd_tiled_output_to_test/
+runs/
+tiled_dataset/
+yolo_dataset_from_test/
 *.pt
 *.pth
